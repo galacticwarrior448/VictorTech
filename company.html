@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/leaflet.css" rel="stylesheet">
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet">
+    <title>Company Overview</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            color: #ffffff; /* Changed to white for better visibility */
+            padding: 20px;
+            margin: 0; /* Reset margin to ensure full-width video */
+            overflow: auto; /* Allow scrolling */
+        }
+        #videoBackground {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover; /* Cover the entire background */
+            z-index: -1; /* Set behind other elements */
+        }
+        #map {
+            height: 400px;
+            margin-bottom: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+        .chart-container {
+            margin-bottom: 30px;
+        }
+        .chart-container canvas {
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            background-color: rgba(73, 80, 87, 0.8);
+            border-radius: 10px;
+        }
+        .charts-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 20px;
+        }
+        .pie-container {
+            flex: 1;
+        }
+        h1, h2 {
+            font-weight: bold;
+            color: #ffffff; /* Changed to white for better visibility */
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        h2 {
+            margin-top: 40px;
+        }
+        .chart-title {
+            font-size: 1.5rem; /* Increased font size for better visibility */
+            margin-bottom: 10px;
+            text-align: center;
+            color: #ffffff; /* Changed to white for better visibility */
+        }
+        .strategy-section, .feedback-section {
+            background-color: rgba(73, 80, 87, 0.8);
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 30px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+        .strategy-section h3, .feedback-section h3 {
+            margin-bottom: 20px;
+            text-align: center;
+            color: #ffffff; /* Changed to white for better visibility */
+        }
+        .feedback-list {
+            list-style-type: none;
+            padding-left: 0;
+        }
+        .feedback-list li {
+            background-color: #6c757d;
+            margin-bottom: 10px;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            color: #ffffff; /* Changed to white for better visibility */
+        }
+        .marketing-strategies {
+            padding: 0;
+            list-style-type: disc;
+            list-style-position: inside;
+            color: #ffffff; /* Changed to white for better visibility */
+        }
+        .side-by-side {
+            display: flex;
+            justify-content: space-between;
+            gap: 20px;
+        }
+        .home-button {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+        .home-button:hover {
+            background-color: rgba(0, 0, 0, 0.9);
+        }
+    </style>
+</head>
+<body>
+<video id="videoBackground" autoplay muted loop>
+    <source src="video.mp4" type="video/mp4"> <!-- Replace with your video URL -->
+    Your browser does not support the video tag.
+</video>
+
+<!-- Home Button -->
+<button class="home-button" onclick="window.location.href='helloworld.html'">Home</button>
+
+<div class="container">
+    <h1 id="companyName">Company Overview</h1>
+
+    <!-- Map Section -->
+    <div id="map"></div>
+
+    <!-- Line Graph: Performance Over Time -->
+    <div class="chart-container">
+        <div class="chart-title">Retailer Performance Over Time</div>
+        <canvas id="performanceChart"></canvas>
+    </div>
+
+    <!-- Bar Graph: Traffic Distribution -->
+    <div class="chart-container">
+        <div class="chart-title">Traffic Distribution Across Stores</div>
+        <canvas id="trafficChart"></canvas>
+    </div>
+
+    <!-- Pie Charts: Demographics -->
+    <div class="charts-row">
+        <div class="pie-container chart-container">
+            <div class="chart-title">Gender Demographics</div>
+            <canvas id="genderChart"></canvas>
+        </div>
+        <div class="pie-container chart-container">
+            <div class="chart-title">Age Demographics</div>
+            <canvas id="ageChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Marketing Strategies and Customer Feedback Section -->
+    <div class="side-by-side">
+        <!-- Marketing Strategies Section -->
+        <div class="strategy-section flex-fill">
+            <h3>Marketing Strategies</h3>
+            <ul id="marketingStrategies" class="marketing-strategies">
+                <li>Loading marketing strategies...</li>
+            </ul>
+        </div>
+
+        <!-- Customer Feedback Section -->
+        <div class="feedback-section flex-fill">
+            <h3>Customer Feedback</h3>
+            <ul id="customerFeedback" class="feedback-list">
+                <li>Loading feedback...</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const companyName = urlParams.get('company');
+
+    document.getElementById('companyName').textContent = companyName;
+
+    async function fetchCompanyData(companyName){
+        const baseUrl = 'http://192.168.74.155:8000/everything/'; // Replace with your API base URL
+        const apiUrl = `${baseUrl}${encodeURIComponent(companyName)}`; // Append company name dynamically
+
+        try {
+            const response = await fetch(apiUrl);
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+
+            const data = await response.json();
+            console.log('Fetched company data:', data); // Debugging: check the fetched data
+
+            return data;
+        } catch (error) {
+            console.error('Error fetching company data:', error);
+            return null; // Return null in case of error
+        }
+    }
+    async function fetchManifestData(companyName){
+        const baseUrl = 'http://192.168.74.155:8000/marketingo/'; // Replace with your API base URL
+        const apiUrl = `${baseUrl}${encodeURIComponent(companyName)}`; // Append company name dynamically
+
+        try {
+            const response = await fetch(apiUrl);
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+
+            const data = await response.json();
+            console.log('Fetched company data:', data); // Debugging: check the fetched data
+
+            return data;
+        } catch (error) {
+            console.error('Error fetching company data:', error);
+            return null; // Return null in case of error
+        }
+    }
+
+
+    function initializeMap(locations) {
+        const map = L.map('map').setView([20.5937, 78.9629], 5);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(map);
+
+        locations.forEach(location => {
+            L.marker([location.lat, location.lng]).addTo(map)
+                .bindPopup(location.label).openPopup();
+        });
+    }
+
+    function createLineChart(ctx, years, data) {
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: years,
+                datasets: [{
+                    label: 'Performance',
+                    data: data,
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 2,
+                    fill: true,
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                }]
+            },
+            options: {
+                plugins: {
+                    legend: {
+                        labels: {
+                            color: 'white' // Set legend text color to white
+                        }
+                    },
+                },
+                scales: {
+                    x: {
+                        ticks: {
+                            color: 'white' // Set x-axis tick color to white
+                        }
+                    },
+                    y: {
+                        ticks: {
+                            color: 'white' // Set y-axis tick color to white
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    function createBarChart(ctx, labels, data) {
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Traffic',
+                    data: data,
+                    backgroundColor: 'rgba(54, 162, 235, 0.6)',
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                plugins: {
+                    legend: {
+                        labels: {
+                            color: 'white' // Set legend text color to white
+                        }
+                    },
+                },
+                scales: {
+                    x: {
+                        ticks: {
+                            color: 'white' // Set x-axis tick color to white
+                        }
+                    },
+                    y: {
+                        ticks: {
+                            color: 'white' // Set y-axis tick color to white
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    function createPieChart(ctx, labels, data, colors) {
+        new Chart(ctx, {
+            type: 'pie',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: data,
+                    backgroundColor: colors,
+                    borderColor: ['rgba(255, 99, 132, 1)', 'rgba(54, 162, 235, 1)'],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                plugins: {
+                    legend: {
+                        labels: {
+                            color: 'white' // Set legend text color to white
+                        }
+                    },
+                }
+            }
+        });
+    }
+
+    async function loadCompanyData() {
+        const companyData = await fetchCompanyData(companyName);
+        const reviewData = await fetchManifestData(companyName);
+        initializeMap(companyData.mapLocations);
+
+        // Line Chart: Performance Over Time
+        const performanceCtx = document.getElementById('performanceChart').getContext('2d');
+        createLineChart(performanceCtx, companyData.performance.years, companyData.performance.data);
+
+        // Bar Chart: Traffic Distribution
+        const trafficCtx = document.getElementById('trafficChart').getContext('2d');
+        createBarChart(trafficCtx, companyData.traffic.stores, companyData.traffic.data);
+
+        // Pie Chart: Gender Demographics
+        const genderCtx = document.getElementById('genderChart').getContext('2d');
+        createPieChart(genderCtx, ['Male', 'Female'], companyData.demographics.gender, ['rgba(255, 99, 132, 1)', 'rgba(54, 162, 235, 1)']);
+
+        // Pie Chart: Age Demographics
+        const ageCtx = document.getElementById('ageChart').getContext('2d');
+        createPieChart(ageCtx, ['0-18', '19-30', '31-40', '41-50', '51-60', '60+'], companyData.demographics.age, ['rgba(255, 99, 132, 1)', 'rgba(54, 162, 235, 1)', 'rgba(255, 206, 86, 1)', 'rgba(75, 192, 192, 1)', 'rgba(153, 102, 255, 1)', 'rgba(255, 159, 64, 1)']);
+
+        // Populate Marketing Strategies
+        const marketingStrategiesList = document.getElementById('marketingStrategies');
+        marketingStrategiesList.innerHTML = '';
+
+        const li = document.createElement('li');
+        li.textContent = reviewData.message;
+        marketingStrategiesList.appendChild(li);
+        ;
+
+        // Populate Customer Feedback
+        const customerFeedbackList = document.getElementById('customerFeedback');
+        customerFeedbackList.innerHTML = '';
+        companyData.customerFeedback.forEach(feedback => {
+            const li = document.createElement('li');
+            li.textContent = feedback;
+            customerFeedbackList.appendChild(li);
+        });
+    }
+
+    // Load data when the page is ready
+    loadCompanyData();
+</script>
+</body>
+</html>
